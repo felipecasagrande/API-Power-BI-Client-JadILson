@@ -1,21 +1,4 @@
-###############################################################
-# Magis5 Orders Data Extraction and Correlation Script         #
-#                                                             #
-#                     #
-# Data: [Data Atual]                                          #
-# Versão: 2.0                                                 #
-#                                                             #
-# Este script realiza a extração de dados da API Magis5,      #
-# faz chamadas paralelas para obter detalhes completos de      #
-# cada pedido e correlaciona os dados das estruturas simples  #
-# e completas, salvando-os em um arquivo Excel estruturado.  #
-#                                                             #
-# Copyright (c) 2025 Gustavo G Pereira.                       #
-# Todos os direitos reservados.                               #
-#                                                             #
-# Este código é fornecido 'como está', sem garantias de       #
-# qualquer tipo. É proibida a redistribuição não autorizada.  #
-###############################################################
+
 
 import requests
 import pandas as pd
