@@ -1,7 +1,7 @@
 ###############################################################
 # Magis5 Orders Data Extraction and Correlation Script         #
 #                                                             #
-# Desenvolvido por: Gustavo G Pereira                         #
+#                     #
 # Data: [Data Atual]                                          #
 # Versão: 2.0                                                 #
 #                                                             #
