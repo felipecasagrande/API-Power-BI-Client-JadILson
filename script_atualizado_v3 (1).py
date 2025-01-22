@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configurações
 API_BASE_URL = "https://app.magis5.com.br/v1"
-API_TOKEN = "4c0a6cbf43944c3da5f6c264f63a7450"  # **Mantenha sua API_TOKEN segura!**
+API_TOKEN = "?"  # **Mantenha sua API_TOKEN segura!**
 HEADERS = {
     "X-MAGIS5-APIKEY": API_TOKEN,
     "Accept": "application/json"
