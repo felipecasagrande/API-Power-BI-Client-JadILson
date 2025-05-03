@@ -16,12 +16,12 @@ start_date = st.sidebar.date_input("Data inicial", df["dateCreated"].min().date(
 end_date = st.sidebar.date_input("Data final", df["dateCreated"].max().date())
 
 df_filtrado = df[(df["dateCreated"].dt.date >= start_date) & (df["dateCreated"].dt.date <= end_date)]
-
+'''
 # 1. Vendas por dia
 st.subheader("💰 Total de Vendas por Dia")
 vendas_por_dia = df_filtrado.groupby(df_filtrado["dateCreated"].dt.date)["totalValue"].sum()
 st.line_chart(vendas_por_dia)
-
+'''
 # 2. Tipos de pagamento
 st.subheader("💳 Tipos de Pagamento (em ordem decrescente)")
 pagamento_ordenado = df_filtrado["payment_type"].value_counts().sort_values(ascending=False)
