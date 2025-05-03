@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
 # Carrega os dados
-df = pd.read_csv("streamlit/relatorio_magis5_97048_registros_2025-04-26_07-59-04.csv", sheet_name="Completo")
+df = pd.read_csv("streamlit/relatorio_magis5_97048_registros_2025-04-26_07-59-04.csv")
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
