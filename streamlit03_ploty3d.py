@@ -20,16 +20,24 @@ df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", "
 df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 df["totalValue"] = pd.to_numeric(df["totalValue"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 
- # 🎯 Novos Filtros
- canais_disponiveis = df["salesChannel"].dropna().unique() if "salesChannel" in df.columns else []
- canal_selecionado = st.sidebar.selectbox("Canal de Venda", options=["Todos"] + list(canais_disponiveis))
- 
- status_disponiveis = df["status"].dropna().unique() if "status" in df.columns else []
- status_selecionado = st.sidebar.selectbox("Status", options=["Todos"] + list(status_disponiveis))
- 
- skus_disponiveis = df["sku"].dropna().unique() if "sku" in df.columns else []
- sku_selecionado = st.sidebar.selectbox("SKU", options=["Todos"] + list(skus_disponiveis))
- 
+
+# 🎛 Filtros na Sidebar
+st.sidebar.header("📅 Filtros de Data")
+start_date = st.sidebar.date_input("Data inicial", df["dateCreated"].min().date())
+end_date = st.sidebar.date_input("Data final", df["dateCreated"].max().date())
+
+produtos_disponiveis = df["item_title"].dropna().unique() if "item_title" in df.columns else []
+produto_selecionado = st.sidebar.selectbox("Produto", options=["Todos"] + list(produtos_disponiveis))
+
+# 🎯 Novos Filtros
+canais_disponiveis = df["salesChannel"].dropna().unique() if "salesChannel" in df.columns else []
+canal_selecionado = st.sidebar.selectbox("Canal de Venda", options=["Todos"] + list(canais_disponiveis))
+
+status_disponiveis = df["status"].dropna().unique() if "status" in df.columns else []
+status_selecionado = st.sidebar.selectbox("Status", options=["Todos"] + list(status_disponiveis))
+
+skus_disponiveis = df["sku"].dropna().unique() if "sku" in df.columns else []
+sku_selecionado = st.sidebar.selectbox("SKU", options=["Todos"] + list(skus_disponiveis))
  # Aplicação dos filtros
  df_filtrado = df[
      (df["dateCreated"].dt.date >= start_date) &
