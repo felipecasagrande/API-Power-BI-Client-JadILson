@@ -7,10 +7,10 @@ import xlsxwriter
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
-# Tema claro/escuro
+# Tema
 tema_escuro = st.sidebar.toggle("🌗 Tema Escuro", value=True)
 if not tema_escuro:
-    st.markdown("""<style>body { background-color: white; color: black; }</style>""", unsafe_allow_html=True)
+    st.markdown("<style>body { background-color: white; color: black; }</style>", unsafe_allow_html=True)
 
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
@@ -19,7 +19,7 @@ file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
 df = pd.read_csv(file_path, sep=";", encoding="latin1")
 df = df[["dateCreated", "item_title", "item_sku", "channel", "status", "item_quantity", "item_price", "item_cost", "totalValue"]]
 
-# Conversão
+# Conversão e limpeza
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
@@ -36,10 +36,10 @@ if len(selected_date) == 2:
 df = df[(df["dateCreated"].dt.date >= start_date) & (df["dateCreated"].dt.date <= end_date)]
 
 with st.sidebar.expander("Filtros Avançados", expanded=True):
-    produtos = st.multiselect("Produto", options=sorted(df["item_title"].dropna().unique().tolist()))
-    canais = st.multiselect("Canal", options=sorted(df["channel"].dropna().unique().tolist()))
-    status_sel = st.multiselect("Status", options=sorted(df["status"].dropna().unique().tolist()))
-    skus = st.multiselect("SKU", options=sorted(df["item_sku"].dropna().unique().tolist()))
+    produtos = st.multiselect("Produto", sorted(df["item_title"].dropna().unique().tolist()))
+    canais = st.multiselect("Canal", sorted(df["channel"].dropna().unique().tolist()))
+    status_sel = st.multiselect("Status", sorted(df["status"].dropna().unique().tolist()))
+    skus = st.multiselect("SKU", sorted(df["item_sku"].dropna().unique().tolist()))
 
 if produtos:
     df = df[df["item_title"].isin(produtos)]
@@ -86,20 +86,14 @@ with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
 # Abas
-abas = st.tabs([
-    "📆 Vendas por Dia",
-    "📊 Vendas por Mês + Análises",
-    "📤 Exportar"
-])
+abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises", "📤 Exportar"])
 
-# 📆 Vendas por Dia
 with abas[0]:
     st.subheader("📆 Total de Vendas por Dia")
     vendas_dia = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig = px.line(vendas_dia, x="dateCreated", y="totalValue", markers=True, title="Total de Vendas por Dia")
     st.plotly_chart(fig, use_container_width=True)
 
-# 📊 Vendas por Mês + Comparativos
 with abas[1]:
     st.subheader("📊 Vendas por Mês e Variação")
     df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
@@ -108,14 +102,12 @@ with abas[1]:
     fig = px.bar(vendas_mes, x="mes", y="totalValue", text="totalValue", title="Total de Vendas por Mês")
     fig.update_traces(texttemplate="R$ %{text:,.2f}", textposition="outside")
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(vendas_mes, use_container_width=True)
 
     st.subheader("📊 Variação de Vendas por Canal")
     canal_mes = df.groupby(["mes", "channel"]).agg({"totalValue": "sum"}).reset_index()
     canal_mes["variação"] = canal_mes.groupby("channel")["totalValue"].pct_change() * 100
     fig_canal = px.line(canal_mes, x="mes", y="totalValue", color="channel", markers=True, title="Comparativo de Vendas por Canal")
     st.plotly_chart(fig_canal, use_container_width=True)
-    st.dataframe(canal_mes, use_container_width=True)
 
     st.subheader("📈 Evolução do Ticket Médio por Canal")
     ticket_canal_mes = df.groupby(["mes", "channel"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
@@ -126,7 +118,7 @@ with abas[1]:
     sku_mes = df.groupby(["mes", "item_sku"])["totalValue"].sum().reset_index()
     top_skus = sku_mes.groupby("item_sku")["totalValue"].sum().nlargest(5).index.tolist()
     sku_mes = sku_mes[sku_mes["item_sku"].isin(top_skus)]
-    fig_sku = px.bar(sku_mes, x="mes", y="totalValue", color="item_sku", barmode="group", title="Comparativo dos 5 SKUs com maior faturamento")
+    fig_sku = px.bar(sku_mes, x="mes", y="totalValue", color="item_sku", barmode="group", title="Top 5 SKUs com maior faturamento")
     st.plotly_chart(fig_sku, use_container_width=True)
 
     st.subheader("🔍 Segmentações por Coluna (Filtro Dinâmico)")
@@ -136,7 +128,6 @@ with abas[1]:
     fig_dinamico = px.bar(agrupado, x=col_metric, y=col_selecionada, orientation="h", title=f"Top 20 por {col_selecionada} usando {col_metric}")
     st.plotly_chart(fig_dinamico, use_container_width=True)
 
-# 📤 Exportação
 with abas[2]:
     st.subheader("📤 Exportar Dados Filtrados")
     df_export = df.copy()
