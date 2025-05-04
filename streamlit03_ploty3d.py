@@ -20,22 +20,29 @@ df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", "
 df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 df["totalValue"] = pd.to_numeric(df["totalValue"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 
-# 📅 Filtros na barra lateral
-st.sidebar.header("📅 Filtros")
-start_date = st.sidebar.date_input("Data inicial", date(2025, 1, 1))
-end_date = st.sidebar.date_input("Data final", date.today())
-
-produtos = df["item_title"].dropna().unique()
-produto_selecionado = st.sidebar.selectbox("Selecionar Produto", options=["Todos"] + list(produtos))
-
-# Aplicação dos filtros
-df_filtrado = df[
-    (df["dateCreated"].dt.date >= start_date) &
-    (df["dateCreated"].dt.date <= end_date)
-]
-if produto_selecionado != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
-
+ # 🎯 Novos Filtros
+ canais_disponiveis = df["salesChannel"].dropna().unique() if "salesChannel" in df.columns else []
+ canal_selecionado = st.sidebar.selectbox("Canal de Venda", options=["Todos"] + list(canais_disponiveis))
+ 
+ status_disponiveis = df["status"].dropna().unique() if "status" in df.columns else []
+ status_selecionado = st.sidebar.selectbox("Status", options=["Todos"] + list(status_disponiveis))
+ 
+ skus_disponiveis = df["sku"].dropna().unique() if "sku" in df.columns else []
+ sku_selecionado = st.sidebar.selectbox("SKU", options=["Todos"] + list(skus_disponiveis))
+ 
+ # Aplicação dos filtros
+ df_filtrado = df[
+     (df["dateCreated"].dt.date >= start_date) &
+     (df["dateCreated"].dt.date <= end_date)
+ ]
+ if produto_selecionado != "Todos":
+     df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
+ if canal_selecionado != "Todos" and "salesChannel" in df.columns:
+     df_filtrado = df_filtrado[df_filtrado["salesChannel"] == canal_selecionado]
+ if status_selecionado != "Todos" and "status" in df.columns:
+     df_filtrado = df_filtrado[df_filtrado["status"] == status_selecionado]
+ if sku_selecionado != "Todos" and "sku" in df.columns:
+     df_filtrado = df_filtrado[df_filtrado["sku"] == sku_selecionado]
 # KPIs
 vendas_total = df_filtrado["totalValue"].sum()
 quantidade_total = df_filtrado["item_title"].count()
