@@ -136,8 +136,7 @@ with abas[2]:
 
     for col in df_export.columns:
         if df_export[col].dtype == "object":
-            df_export[col] = df_export[col].apply(lambda x: str(x)[:32767] if pd.notnull(x) else "")
-
+            df_export[col] = df_export[col].astype(str).apply(lambda x: x[:32767] if isinstance(x, str) else x)
 
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter', options={"strings_to_formulas": False}) as writer:
