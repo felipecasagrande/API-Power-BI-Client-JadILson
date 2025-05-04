@@ -116,7 +116,7 @@ col_csv.download_button(
 buffer = io.BytesIO()
 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
     df_filtrado.to_excel(writer, index=False, sheet_name='Vendas')
-    writer.save()
+
 
 col_excel.download_button(
     label="📊 Baixar Excel",
