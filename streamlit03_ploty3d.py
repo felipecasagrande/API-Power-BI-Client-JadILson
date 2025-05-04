@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 📄 Configurações iniciais
+# 📄 Configuração da página
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
@@ -11,17 +11,8 @@ df = pd.read_csv("relatorio_magis5_97048_registros_2025-04-26_07-59-04.csv", sep
 
 # 🔁 Conversões e limpeza de dados
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
-
-# Converte colunas monetárias
-df["item_price"] = pd.to_numeric(
-    df["item_price"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True),
-    errors="coerce"
-)
-
-df["item_cost"] = pd.to_numeric(
-    df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True),
-    errors="coerce"
-)
+df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
+df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 
 # 📅 Filtros de data
 st.sidebar.header("📅 Filtros de Data")
@@ -53,9 +44,9 @@ fig3 = px.bar(status, x="Status", y="Quantidade", color="Quantidade", title="Sta
 fig3.update_layout(xaxis_tickangle=90)
 st.plotly_chart(fig3, use_container_width=True)
 
-# 📈 Lucro por Produto (Top 10)
+# 📈 Lucro por Produto
 st.subheader("📈 Top 10 Produtos por Lucro Total")
-df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
+df_filtrado.loc[:, "lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
 lucro = (
     df_filtrado.groupby("item_title")[["lucro_unitario"]]
     .sum()
@@ -63,9 +54,15 @@ lucro = (
     .head(10)
     .reset_index()
 )
-fig4 = px.bar(lucro, x="lucro_unitario", y="item_title", orientation='h',
-              title="Top 10 Produtos por Lucro Total", color="lucro_unitario",
-              labels={"lucro_unitario": "Lucro Total (R$)", "item_title": "Produto"})
+fig4 = px.bar(
+    lucro,
+    x="lucro_unitario",
+    y="item_title",
+    orientation='h',
+    title="Top 10 Produtos por Lucro Total",
+    color="lucro_unitario",
+    labels={"lucro_unitario": "Lucro Total (R$)", "item_title": "Produto"}
+)
 st.plotly_chart(fig4, use_container_width=True)
 
 # 📄 Exibir dados brutos
