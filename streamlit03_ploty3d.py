@@ -6,6 +6,17 @@ import io
 import xlsxwriter
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
+
+# 🔁 Alternador de tema
+modo_escuro = st.sidebar.toggle("🌙 Modo Escuro", value=True)
+if not modo_escuro:
+    st.markdown("""
+    <style>
+    .main { background-color: #FFFFFF; color: #000000; }
+    .stApp { background-color: #FFFFFF; }
+    </style>
+    """, unsafe_allow_html=True)
+
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
@@ -77,46 +88,50 @@ with col3:
 with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
-# Abas
-aba = st.tabs(["📆 Vendas por Dia", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "💲 Preços", "📦 Custos", "📤 Exportar"])
+# Botões de navegação
+aba_labels = ["📆 Vendas por Dia", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "💲 Preços", "📦 Custos", "📤 Exportar"]
+aba_index = st.sidebar.radio("Navegação", options=range(len(aba_labels)), format_func=lambda i: aba_labels[i])
+st.subheader(aba_labels[aba_index])
 
-with aba[0]:
+# Conteúdo das abas
+if aba_index == 0:
     diario = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig = px.line(diario, x="dateCreated", y="totalValue", title="Vendas Diárias")
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[1]:
+elif aba_index == 1:
     top_prod = df.groupby("item_title")["item_quantity"].sum().nlargest(10).reset_index()
     fig = px.pie(top_prod, names="item_title", values="item_quantity", title="Top Produtos por Quantidade")
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[2]:
+elif aba_index == 2:
     df["lucro_unitario"] = df["item_price"] - df["item_cost"]
     lucro = df.groupby("item_title")["lucro_unitario"].sum().nlargest(10).reset_index()
     fig = px.treemap(lucro, path=["item_title"], values="lucro_unitario", title="Lucro por Produto")
     fig.update_traces(textfont=dict(size=28))
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[3]:
+elif aba_index == 3:
     df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
     mensal = df.groupby("mes")["totalValue"].sum().reset_index()
-    fig = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês", text="totalValue")
-    fig.update_traces(textposition="top center")
+    mensal["variação"] = mensal["totalValue"].pct_change() * 100
+    fig = px.bar(mensal, x="mes", y="totalValue", text="variação", title="Vendas por Mês com Variação")
+    fig.update_traces(texttemplate='%{text:.2f}%')
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[4]:
+elif aba_index == 4:
     top_price = df.nlargest(50, "item_price")
     fig = px.scatter(top_price, x="item_title", y="item_price", title="Top 50 Preços")
     fig.update_layout(xaxis_tickangle=45)
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[5]:
+elif aba_index == 5:
     top_custo = df.nlargest(50, "item_cost")
     fig = px.box(top_custo, x="item_title", y="item_cost", title="Top 50 Custos")
     fig.update_layout(xaxis_tickangle=45)
     st.plotly_chart(fig, use_container_width=True)
 
-with aba[6]:
+elif aba_index == 6:
     st.subheader("Exportar Dados")
     df.drop(columns=["mes"], errors="ignore", inplace=True)
     col_csv, col_excel = st.columns(2)
