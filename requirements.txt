@@ -5,3 +5,7 @@ seaborn
 matplotlib
 numpy
 requests
+plotly.express
+plotly.graph_objects 
+
+
