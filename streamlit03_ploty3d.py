@@ -78,42 +78,43 @@ with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
 # Abas
-aba = st.tabs(["📆 Vendas por Dia", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "💲 Preços", "📦 Custos", "📤 Exportar"])
+aba = st.tabs(["📆 Vendas por Dia", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "💲 Preços", "📦 Custos", "📤 Exportar", "🧮 Ticket por Canal"])
 
 with aba[0]:
     diario = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig = px.line(diario, x="dateCreated", y="totalValue", title="Vendas Diárias")
+    fig.update_traces(hovertemplate='Data: %{x}<br>Vendas: R$ %{y:,.2f}<extra></extra>')
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[1]:
     top_prod = df.groupby("item_title")["item_quantity"].sum().nlargest(10).reset_index()
     fig = px.pie(top_prod, names="item_title", values="item_quantity", title="Top Produtos por Quantidade")
+    fig.update_layout(height=500)
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[2]:
     df["lucro_unitario"] = df["item_price"] - df["item_cost"]
     lucro = df.groupby("item_title")["lucro_unitario"].sum().nlargest(10).reset_index()
     fig = px.treemap(lucro, path=["item_title"], values="lucro_unitario", title="Lucro por Produto")
-    fig.update_traces(textfont=dict(size=28))
+    fig.update_traces(textfont=dict(size=28), hovertemplate='%{label}<br>Lucro Total: R$ %{value:,.2f}<extra></extra>')
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[3]:
     df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
     mensal = df.groupby("mes")["totalValue"].sum().reset_index()
-    fig = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês", text="totalValue")
+    mensal["totalValueFormatado"] = mensal["totalValue"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
+    fig = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês", text="totalValueFormatado")
     fig.update_traces(textposition="top center")
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[4]:
     top_price = df.nlargest(50, "item_price")
-    fig = px.scatter(top_price, x="item_title", y="item_price", title="Top 50 Preços")
-    fig.update_layout(xaxis_tickangle=45)
+    fig = px.bar(top_price, y="item_title", x="item_price", orientation='h', title="Top 50 Preços")
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[5]:
     top_custo = df.nlargest(50, "item_cost")
-    fig = px.box(top_custo, x="item_title", y="item_cost", title="Top 50 Custos")
-    fig.update_layout(xaxis_tickangle=45)
+    fig = px.box(top_custo, y="item_title", x="item_cost", orientation='h', title="Top 50 Custos")
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[6]:
@@ -131,3 +132,12 @@ with aba[6]:
         except ValueError:
             df.astype(str).to_excel(writer, index=False, sheet_name='Vendas')
     col_excel.download_button("📊 Baixar Excel", data=buffer.getvalue(), file_name="dados_filtrados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+with aba[7]:
+    st.subheader("Ticket Médio por Canal")
+    if "channel" in df.columns:
+        canal_kpi = df.groupby("channel").agg({"totalValue": "sum", "item_quantity": "sum"}).reset_index()
+        canal_kpi["ticket"] = canal_kpi["totalValue"] / canal_kpi["item_quantity"]
+        fig = px.bar(canal_kpi, x="channel", y="ticket", title="Ticket Médio por Canal", text_auto='.2f')
+        fig.update_traces(hovertemplate='Canal: %{x}<br>Ticket Médio: R$ %{y:,.2f}<extra></extra>')
+        st.plotly_chart(fig, use_container_width=True)
