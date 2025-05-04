@@ -90,7 +90,8 @@ tabs = st.tabs([
     "📈 Variação por Canal",
     "📊 Ticket Médio por Canal",
     "📦 SKUs por Mês",
-    "🔍 Segmentação Dinâmica"
+    "🔍 Segmentação Dinâmica",
+    "📤 Exportar CSV"
 ])
 
 with tabs[0]:
@@ -136,3 +137,13 @@ with tabs[5]:
     agrupado = df.groupby(col_selecionada)[col_metric].sum().reset_index().sort_values(by=col_metric, ascending=False).head(20)
     fig_dinamico = px.bar(agrupado, x=col_metric, y=col_selecionada, orientation="h", title=f"Top 20 por {col_selecionada} usando {col_metric}")
     st.plotly_chart(fig_dinamico, use_container_width=True)
+
+with tabs[6]:
+    st.subheader("📤 Exportar Dados Filtrados em CSV")
+    csv = df.to_csv(index=False, sep=";", encoding="utf-8")
+    st.download_button(
+        label="📥 Baixar CSV",
+        data=csv,
+        file_name="dados_filtrados.csv",
+        mime="text/csv"
+    )
