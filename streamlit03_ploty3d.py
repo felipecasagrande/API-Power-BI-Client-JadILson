@@ -1,170 +1,170 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import date
-import io
-import xlsxwriter
+import datetime
+from io import BytesIO
 
 # Configuração da página
-st.set_page_config(page_title="Dashboard Magis5", layout="wide")
-st.title("📦 Dashboard Magis5 - Relatório de Vendas")
+st.set_page_config(page_title="Análise de Vendas", layout="wide")
 
-# 📥 Leitura do CSV
-file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
-df = pd.read_csv(file_path, sep=";", encoding="latin1")
+# Título do dashboard
+st.title("Dashboard de Análise de Vendas")
 
-# 🧹 Limpeza e conversões
-df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
-df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
-df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
-df["totalValue"] = pd.to_numeric(df["totalValue"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
+# Função para carregar dados (ajuste o caminho do arquivo conforme necessário)
+@st.cache_data
+def load_data():
+    # Aqui assumimos um arquivo de dados com colunas: Data, Vendas, Lucro, Item, Canal, Preco, Custo, Order_ID
+    # Substitua pelo carregamento real dos seus dados
+    return pd.read_excel("sales_data.xlsx")
 
-# 🎛 Filtros na Sidebar
-st.sidebar.header("📅 Filtros de Data")
-start_date = st.sidebar.date_input("Data inicial", df["dateCreated"].min().date())
-end_date = st.sidebar.date_input("Data final", df["dateCreated"].max().date())
+df = load_data()
 
-produtos_disponiveis = df["item_title"].dropna().unique() if "item_title" in df.columns else []
-produto_selecionado = st.sidebar.selectbox("Produto", options=["Todos"] + list(produtos_disponiveis))
+# Conversão da coluna de data para datetime, se necessário
+if not pd.api.types.is_datetime64_any_dtype(df['Data']):
+    df['Data'] = pd.to_datetime(df['Data'])
 
-canais_disponiveis = df["salesChannel"].dropna().unique() if "salesChannel" in df.columns else []
-canal_selecionado = st.sidebar.selectbox("Canal de Venda", options=["Todos"] + list(canais_disponiveis))
+# Sidebar - Filtro de datas (início fixo em 01/01/2025 até hoje)
+st.sidebar.header("Filtros")
+start_date_default = datetime.date(2025, 1, 1)
+end_date_default = datetime.date.today()
+selected_date = st.sidebar.date_input("Selecione o intervalo de datas:", [start_date_default, end_date_default])
+if isinstance(selected_date, list) and len(selected_date) == 2:
+    start_date, end_date = selected_date
+else:
+    start_date = start_date_default
+    end_date = end_date_default
 
-status_disponiveis = df["status"].dropna().unique() if "status" in df.columns else []
-status_selecionado = st.sidebar.selectbox("Status", options=["Todos"] + list(status_disponiveis))
+# Garantir que a data inicial não seja anterior a 01/01/2025
+if start_date < start_date_default:
+    start_date = start_date_default
+if end_date < start_date:
+    end_date = start_date_default
 
-skus_disponiveis = df["sku"].dropna().unique() if "sku" in df.columns else []
-sku_selecionado = st.sidebar.selectbox("SKU", options=["Todos"] + list(skus_disponiveis))
+# Filtrando o DataFrame pelo intervalo de datas selecionado
+df_filtered = df[(df['Data'] >= pd.to_datetime(start_date)) & (df['Data'] <= pd.to_datetime(end_date))]
 
-# Aplicação dos filtros
-df_filtrado = df[
-    (df["dateCreated"].dt.date >= start_date) &
-    (df["dateCreated"].dt.date <= end_date)
-]
-if produto_selecionado != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
-if canal_selecionado != "Todos" and "salesChannel" in df.columns:
-    df_filtrado = df_filtrado[df_filtrado["salesChannel"] == canal_selecionado]
-if status_selecionado != "Todos" and "status" in df.columns:
-    df_filtrado = df_filtrado[df_filtrado["status"] == status_selecionado]
-if sku_selecionado != "Todos" and "sku" in df.columns:
-    df_filtrado = df_filtrado[df_filtrado["sku"] == sku_selecionado]
+# Cálculo dos KPIs
+vendas_total = df_filtered['Vendas'].sum()
+lucro_total = df_filtered['Lucro'].sum()
 
-# KPIs
-vendas_total = df_filtrado["totalValue"].sum()
-quantidade_total = df_filtrado["item_title"].count()
+# Calcular Ticket Médio: valor total de vendas dividido pelo número de pedidos
+if 'Order_ID' in df_filtered.columns:
+    num_pedidos = df_filtered['Order_ID'].nunique()
+else:
+    num_pedidos = len(df_filtered)
+ticket_medio = vendas_total / num_pedidos if num_pedidos > 0 else 0
 
-col1, col2 = st.columns(2)
-col1.metric("💵 Valor Total de Vendas", f"R$ {vendas_total:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
-col2.metric("📦 Quantidade de Itens Vendidos", f"{quantidade_total:,}".replace(",", "."))
+# Calcular Margem Média (%): (Lucro / Vendas) * 100
+margem_media = (lucro_total / vendas_total * 100) if vendas_total > 0 else 0
 
-# 📊 Evolução das Vendas
-st.subheader("💰 Total de Vendas por Dia")
-vendas_por_dia = df_filtrado.groupby(df_filtrado["dateCreated"].dt.date)["totalValue"].sum().reset_index()
-vendas_por_dia["totalValueFormatado"] = vendas_por_dia["totalValue"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
+# Exibir KPIs estilizados com bordas
+st.markdown("## Indicadores Principais")
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
-fig1 = px.line(
-    vendas_por_dia,
-    x="dateCreated",
-    y="totalValue",
-    markers=True,
-    labels={"dateCreated": "Data", "totalValue": "Total (R$)"},
-    title="Evolução das Vendas"
-)
-fig1.update_traces(text=vendas_por_dia["totalValueFormatado"], hovertemplate="Data: %{x}<br>Total: %{text}<extra></extra>")
-st.plotly_chart(fig1, use_container_width=True)
+with kpi1:
+    st.markdown(f"""
+        <div style="border:2px solid #4CAF50; padding:10px; border-radius:5px;">
+            <h4>Total de Vendas</h4>
+            <p style="font-size:24px; font-weight:bold;">R$ {vendas_total:,.2f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+with kpi2:
+    st.markdown(f"""
+        <div style="border:2px solid #2196F3; padding:10px; border-radius:5px;">
+            <h4>Total de Lucro</h4>
+            <p style="font-size:24px; font-weight:bold;">R$ {lucro_total:,.2f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+with kpi3:
+    st.markdown(f"""
+        <div style="border:2px solid #FF9800; padding:10px; border-radius:5px;">
+            <h4>Ticket Médio</h4>
+            <p style="font-size:24px; font-weight:bold;">R$ {ticket_medio:,.2f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+with kpi4:
+    st.markdown(f"""
+        <div style="border:2px solid #9C27B0; padding:10px; border-radius:5px;">
+            <h4>Margem Média</h4>
+            <p style="font-size:24px; font-weight:bold;">{margem_media:.2f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-# 📦 Top Itens por Quantidade
-st.subheader("📦 Top 10 Itens mais Vendidos")
-mais_vendidos = df_filtrado["item_title"].value_counts().head(10).reset_index()
-mais_vendidos.columns = ["item_title", "quantidade"]
+# Gráfico 1: Evolução de Vendas Diária
+st.subheader("Evolução Diária de Vendas")
+vendas_diarias = df_filtered.groupby(df_filtered['Data'].dt.date)['Vendas'].sum().reset_index()
+fig_vendas_diarias = px.line(vendas_diarias, x='Data', y='Vendas', markers=True,
+                             labels={'Data': 'Data', 'Vendas': 'Total de Vendas'})
+st.plotly_chart(fig_vendas_diarias, use_container_width=True)
 
-fig2 = px.pie(
-    mais_vendidos,
-    values="quantidade",
-    names="item_title",
-    title="Participação dos 10 Itens mais Vendidos"
-)
-st.plotly_chart(fig2, use_container_width=True)
+# Gráfico 2: Top 10 Itens por Vendas
+st.subheader("Top 10 Itens por Vendas")
+top_itens = df_filtered.groupby('Item')['Vendas'].sum().nlargest(10).reset_index()
+fig_top_itens = px.bar(top_itens, x='Vendas', y='Item', orientation='h',
+                       labels={'Vendas': 'Total de Vendas', 'Item': 'Item'},
+                       title='Top 10 Itens')
+fig_top_itens.update_layout(yaxis={'categoryorder':'total ascending'})
+st.plotly_chart(fig_top_itens, use_container_width=True)
 
-# 📈 Top Produtos por Lucro
-st.subheader("📈 Top 10 Produtos por Lucro Total")
-df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
-lucro = df_filtrado.groupby("item_title")["lucro_unitario"].sum().sort_values(ascending=False).head(10).reset_index()
-lucro["lucro_formatado"] = lucro["lucro_unitario"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
+# Gráfico 3: Evolução de Lucro Diária
+st.subheader("Evolução Diária de Lucro")
+lucro_diario = df_filtered.groupby(df_filtered['Data'].dt.date)['Lucro'].sum().reset_index()
+fig_lucro_diario = px.line(lucro_diario, x='Data', y='Lucro', markers=True,
+                           labels={'Data': 'Data', 'Lucro': 'Lucro Total'})
+st.plotly_chart(fig_lucro_diario, use_container_width=True)
 
-fig3 = px.treemap(
-    lucro,
-    path=["item_title"],
-    values="lucro_unitario",
-    title="Lucro Total por Produto (Top 10)",
-)
-st.plotly_chart(fig3, use_container_width=True)
+# Gráfico 4: Vendas por Canal
+st.subheader("Vendas por Canal")
+vendas_canal = df_filtered.groupby('Canal')['Vendas'].sum().reset_index()
+fig_vendas_canal = px.bar(vendas_canal, x='Canal', y='Vendas',
+                          labels={'Canal': 'Canal de Venda', 'Vendas': 'Total de Vendas'},
+                          title='Total de Vendas por Canal')
+st.plotly_chart(fig_vendas_canal, use_container_width=True)
 
-# 🔄 Vendas por canal
-if "salesChannel" in df.columns:
-    st.subheader("🛍️ Vendas por Canal de Venda")
-    vendas_por_canal = df_filtrado["salesChannel"].value_counts().reset_index()
-    vendas_por_canal.columns = ["Canal", "Quantidade"]
-    fig4 = px.funnel(
-        vendas_por_canal,
-        x="Quantidade",
-        y="Canal",
-        title="Distribuição das Vendas por Canal"
-    )
-    st.plotly_chart(fig4, use_container_width=True)
+# Gráfico 5: Evolução Mensal de Vendas
+st.subheader("Evolução Mensal de Vendas")
+df_filtered['Mes'] = df_filtered['Data'].dt.to_period('M').dt.to_timestamp()
+vendas_mensais = df_filtered.groupby('Mes')['Vendas'].sum().reset_index()
+fig_vendas_mensais = px.line(vendas_mensais, x='Mes', y='Vendas', markers=True,
+                             labels={'Mes': 'Mês', 'Vendas': 'Total de Vendas'})
+st.plotly_chart(fig_vendas_mensais, use_container_width=True)
 
-# 📅 Evolução mensal
-st.subheader("📅 Evolução Mensal de Vendas")
-df_filtrado["mes"] = df_filtrado["dateCreated"].dt.to_period("M").astype(str)
-mensal = df_filtrado.groupby("mes")["totalValue"].sum().reset_index()
-fig5 = px.area(
-    mensal,
-    x="mes",
-    y="totalValue",
-    title="Vendas Totais por Mês",
-    labels={"mes": "Mês", "totalValue": "Total Vendido (R$)"}
-)
-st.plotly_chart(fig5, use_container_width=True)
+# Gráfico 6: Distribuição de Preço
+st.subheader("Distribuição de Preço")
+fig_dist_preco = px.histogram(df_filtered, x='Preco', nbins=50,
+                              labels={'Preco': 'Preço Unitário'},
+                              title='Distribuição dos Preços')
+st.plotly_chart(fig_dist_preco, use_container_width=True)
 
-# 📊 Gráficos adicionais
-st.subheader("🧭 Distribuição de Preço dos Produtos")
-fig6 = px.violin(df_filtrado, y="item_price", box=True, points="all", title="Distribuição de Preço dos Produtos")
-st.plotly_chart(fig6, use_container_width=True)
+# Gráfico 7: Correlação entre Preço e Custo
+st.subheader("Relação entre Preço e Custo (Scatter Plot)")
+fig_price_cost = px.scatter(df_filtered, x='Preco', y='Custo',
+                            labels={'Preco': 'Preço', 'Custo': 'Custo'},
+                            title='Correlação Preço vs Custo')
+st.plotly_chart(fig_price_cost, use_container_width=True)
 
-st.subheader("🔍 Correlação entre Preço e Custo")
-fig7 = px.scatter(df_filtrado, x="item_price", y="item_cost", title="Correlação entre Preço e Custo", trendline="ols")
-st.plotly_chart(fig7, use_container_width=True)
+# Gráfico 8: Mapa de Calor de Correlação (Preço, Custo, Vendas, Lucro)
+st.subheader("Mapa de Calor de Correlação")
+corr = df_filtered[['Preco', 'Custo', 'Vendas', 'Lucro']].corr()
+fig_heatmap = px.imshow(corr, text_auto=True, aspect="auto",
+                        labels=dict(x="Variáveis", y="Variáveis", color="Correlação"),
+                        x=corr.columns, y=corr.columns)
+st.plotly_chart(fig_heatmap, use_container_width=True)
 
-st.subheader("📌 Densidade de Vendas por Data")
-fig8 = px.density_heatmap(df_filtrado, x=df_filtrado["dateCreated"].dt.date, y="item_title", nbinsx=30, title="Mapa de Calor de Vendas por Produto e Data")
-st.plotly_chart(fig8, use_container_width=True)
+# Gráfico 9: Boxplot de Custo
+st.subheader("Boxplot de Custo")
+fig_box_custo = px.box(df_filtered, y='Custo', points="all",
+                       labels={'Custo': 'Custo'})
+st.plotly_chart(fig_box_custo, use_container_width=True)
 
-st.subheader("📦 Boxplot de Custo dos Produtos")
-fig9 = px.box(df_filtrado, x="item_title", y="item_cost", title="Boxplot de Custos por Produto")
-st.plotly_chart(fig9, use_container_width=True)
+# Exportação de dados filtrados para CSV e Excel
+st.subheader("Exportar Dados")
+csv_data = df_filtered.to_csv(index=False).encode('utf-8')
+st.download_button(label="Baixar CSV", data=csv_data, file_name='dados_filtrados.csv', mime='text/csv')
 
-# 📤 Exportação
-df_filtrado.drop(columns=["mes"], errors="ignore", inplace=True)
-st.subheader("📤 Exportar Dados Filtrados")
-col_csv, col_excel = st.columns(2)
-
-csv = df_filtrado.to_csv(index=False, sep=";", encoding="utf-8")
-col_csv.download_button(
-    label="📄 Baixar CSV",
-    data=csv,
-    file_name="dados_filtrados.csv",
-    mime="text/csv"
-)
-
-buffer = io.BytesIO()
-with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    df_filtrado.to_excel(writer, index=False, sheet_name='Vendas')
-
-col_excel.download_button(
-    label="📊 Baixar Excel",
-    data=buffer.getvalue(),
-    file_name="dados_filtrados.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+output = BytesIO()
+writer = pd.ExcelWriter(output, engine='xlsxwriter')
+df_filtered.to_excel(writer, index=False, sheet_name='Dados')
+writer.save()
+excel_data = output.getvalue()
+st.download_button(label="Baixar Excel", data=excel_data, file_name='dados_filtrados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
