@@ -117,7 +117,19 @@ with abas[7]:
 with abas[8]:
     st.subheader("📤 Exportar Dados Filtrados")
     df_export = df.copy()
+
+    # Garantir tipos válidos para exportação
+    for col in df_export.columns:
+        if df_export[col].dtype == "object":
+            df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
+
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df_export.to_excel(writer, index=False, sheet_name='Vendas')
-    st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="vendas_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    st.download_button(
+        label="📥 Baixar Excel",
+        data=buffer.getvalue(),
+        file_name="vendas_filtradas.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ), file_name="vendas_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
