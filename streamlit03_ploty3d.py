@@ -84,20 +84,68 @@ with col3:
 with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
-# Exportação
-st.subheader("📤 Exportar Dados Filtrados")
-df_export = df.copy()
-for col in df_export.columns:
-    if df_export[col].dtype == "object":
-        df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
+# Abas
+abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês", "🧮 Ticket por Canal", "🏆 Top Produtos", "🌳 Lucro por Produto", "💲 Preços", "📦 Custos", "📤 Exportar"])
 
-buffer = io.BytesIO()
-with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    df_export.to_excel(writer, index=False, sheet_name='Vendas')
+with abas[0]:
+    st.subheader("📆 Vendas por Dia")
+    vendas_dia = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
+    fig = px.line(vendas_dia, x="dateCreated", y="totalValue", markers=True, title="Total de Vendas por Dia")
+    st.plotly_chart(fig, use_container_width=True)
 
-st.download_button(
-    label="📥 Baixar Excel",
-    data=buffer.getvalue(),
-    file_name="vendas_filtradas.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+with abas[1]:
+    st.subheader("📊 Vendas por Mês")
+    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
+    vendas_mes = df.groupby("mes")["totalValue"].sum().reset_index()
+    fig = px.bar(vendas_mes, x="mes", y="totalValue", title="Total de Vendas por Mês")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[2]:
+    st.subheader("🧮 Ticket Médio por Canal")
+    ticket_canal = df.groupby("channel").apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
+    fig = px.bar(ticket_canal, x="channel", y="ticket_medio", title="Ticket Médio por Canal")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[3]:
+    st.subheader("🏆 Top Produtos por Quantidade")
+    top_prod = df["item_title"].value_counts().head(10).reset_index()
+    top_prod.columns = ["Produto", "Quantidade"]
+    fig = px.pie(top_prod, values="Quantidade", names="Produto", title="Top 10 Produtos")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[4]:
+    st.subheader("🌳 Lucro por Produto")
+    df["lucro_unitario"] = df["item_price"] - df["item_cost"]
+    lucro = df.groupby("item_title")["lucro_unitario"].sum().sort_values(ascending=False).head(10).reset_index()
+    fig = px.treemap(lucro, path=["item_title"], values="lucro_unitario", title="Lucro Total por Produto")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[5]:
+    st.subheader("💲 Top 10 Preços por Produto")
+    top_precos = df.groupby("item_title")["item_price"].mean().sort_values(ascending=False).head(10).reset_index()
+    fig = px.bar(top_precos, x="item_price", y="item_title", orientation="h", title="Top 10 Preços")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[6]:
+    st.subheader("📦 Top 10 Custos por Produto")
+    top_custos = df.groupby("item_title")["item_cost"].mean().sort_values(ascending=False).head(10).reset_index()
+    fig = px.bar(top_custos, x="item_cost", y="item_title", orientation="h", title="Top 10 Custos")
+    st.plotly_chart(fig, use_container_width=True)
+
+with abas[7]:
+    st.subheader("📤 Exportar Dados Filtrados")
+    df_export = df.copy()
+    for col in df_export.columns:
+        if df_export[col].dtype == "object":
+            df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Vendas')
+
+    st.download_button(
+        label="📥 Baixar Excel",
+        data=buffer.getvalue(),
+        file_name="vendas_filtradas.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
