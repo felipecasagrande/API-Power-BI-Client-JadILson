@@ -86,39 +86,9 @@ with col4:
 # Abas
 abas = st.tabs(["📆 Vendas por Dia", "🧮 Ticket por Canal", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "📈 Comparativo Canais", "💲 Preços", "📦 Custos", "📤 Exportar"])
 
-with abas[4]:
-    st.subheader("📊 Vendas por Mês")
-    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
-    mensal = df.groupby("mes")["totalValue"].sum().reset_index()
-    mensal["var_pct"] = mensal["totalValue"].pct_change() * 100
-    st.dataframe(mensal, use_container_width=True)
-    fig = px.bar(mensal, x="mes", y="totalValue", text="totalValue", title="Vendas Totais por Mês", labels={"mes": "Mês", "totalValue": "Total Vendido (R$)"})
-    fig.update_traces(texttemplate="R$ %{text:,.0f}", textposition="outside")
-    st.plotly_chart(fig, use_container_width=True)
-
-with abas[5]:
-    st.subheader("📈 Comparativo de Vendas por Canal")
-    canal_vendas = df.groupby(["mes", "channel"]).agg({"totalValue": "sum"}).reset_index()
-    fig = px.line(canal_vendas, x="mes", y="totalValue", color="channel", markers=True, title="Comparativo Mensal por Canal")
-    st.plotly_chart(fig, use_container_width=True)
-
-with abas[6]:
-    st.subheader("💲 Top 50 Preços por Produto")
-    preco_top = df.groupby("item_title")["item_price"].mean().sort_values(ascending=False).head(50).reset_index()
-    fig = px.bar(preco_top, x="item_price", y="item_title", orientation="h", title="Top 50 Preços")
-    st.plotly_chart(fig, use_container_width=True)
-
-with abas[7]:
-    st.subheader("📦 Top 50 Custos por Produto")
-    custo_top = df.groupby("item_title")["item_cost"].mean().sort_values(ascending=False).head(50).reset_index()
-    fig = px.bar(custo_top, x="item_cost", y="item_title", orientation="h", title="Top 50 Custos")
-    st.plotly_chart(fig, use_container_width=True)
-
 with abas[8]:
     st.subheader("📤 Exportar Dados Filtrados")
     df_export = df.copy()
-
-    # Garantir tipos válidos para exportação
     for col in df_export.columns:
         if df_export[col].dtype == "object":
             df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
@@ -132,4 +102,4 @@ with abas[8]:
         data=buffer.getvalue(),
         file_name="vendas_filtradas.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ), file_name="vendas_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    )
