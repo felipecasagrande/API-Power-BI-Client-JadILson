@@ -5,5 +5,4 @@ seaborn
 matplotlib
 numpy
 requests
-io
 xlsxwriter
