@@ -7,14 +7,14 @@ import xlsxwriter
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
-# Tema
+# Tema escuro/claro
 tema_escuro = st.sidebar.toggle("🌗 Tema Escuro", value=True)
 if not tema_escuro:
     st.markdown("<style>body { background-color: white; color: black; }</style>", unsafe_allow_html=True)
 
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
-# Dados
+# Leitura dos dados
 file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
 df = pd.read_csv(file_path, sep=";", encoding="latin1")
 df = df[["dateCreated", "item_title", "item_sku", "channel", "status", "item_quantity", "item_price", "item_cost", "totalValue"]]
@@ -129,19 +129,27 @@ with abas[1]:
     st.plotly_chart(fig_dinamico, use_container_width=True)
 
 with abas[2]:
-    st.subheader("📤 Exportar Dados Filtrados")
+    st.subheader("📤 Exportar Todas as Abas")
     df_export = df.copy()
+    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
+    df["dia"] = df["dateCreated"].dt.date
+
     for col in df_export.columns:
         if df_export[col].dtype == "object":
-            df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
+            df_export[col] = df_export[col].astype(str).apply(lambda x: x[:32767] if isinstance(x, str) else x)
 
     buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Vendas')
+    with pd.ExcelWriter(buffer, engine='xlsxwriter', options={"strings_to_formulas": False}) as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Vendas Filtradas')
+        df.groupby("dia")["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Resumo Diário')
+        df.groupby("mes")["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Resumo Mensal')
+        df.groupby(["mes", "channel"])["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Canal x Mês')
+        df.groupby(["mes", "item_sku"])["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='SKU x Mês')
+        df.groupby("channel")["totalValue"].sum().sort_values(ascending=False).reset_index().to_excel(writer, index=False, sheet_name='Ranking Canais')
 
     st.download_button(
-        label="📥 Baixar Excel",
+        label="📥 Baixar Excel Completo",
         data=buffer.getvalue(),
-        file_name="vendas_filtradas.xlsx",
+        file_name="dashboard_completo.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
