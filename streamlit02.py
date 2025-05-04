@@ -29,7 +29,6 @@ df["item_cost"] = pd.to_numeric(
 st.sidebar.header("📅 Filtros")
 start_date = st.sidebar.date_input("Data inicial", df["dateCreated"].min().date())
 end_date = st.sidebar.date_input("Data final", df["dateCreated"].max().date())
-
 df_filtrado = df[(df["dateCreated"].dt.date >= start_date) & (df["dateCreated"].dt.date <= end_date)]
 
 # 💳 Tipos de Pagamento
@@ -39,6 +38,7 @@ pagamento.columns = ["Tipo de Pagamento", "Quantidade"]
 fig1, ax1 = plt.subplots()
 sns.barplot(data=pagamento, x="Tipo de Pagamento", y="Quantidade", palette="viridis", ax=ax1)
 ax1.set_title("Tipos de Pagamento")
+ax1.set_xticklabels(ax1.get_xticklabels(), rotation=90)
 st.pyplot(fig1)
 
 # 🔥 Top 10 Produtos Mais Vendidos
@@ -58,6 +58,7 @@ status.columns = ["Status", "Quantidade"]
 fig3, ax3 = plt.subplots()
 sns.barplot(data=status, x="Status", y="Quantidade", palette="flare", ax=ax3)
 ax3.set_title("Status dos Pedidos")
+ax3.set_xticklabels(ax3.get_xticklabels(), rotation=90)
 st.pyplot(fig3)
 
 # 🗺️ Pedidos por Estado (UF)
