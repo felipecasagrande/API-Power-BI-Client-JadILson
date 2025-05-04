@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
-import io
-import xlsxwriter
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
@@ -86,7 +84,7 @@ with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
 # Abas
-abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises", "📤 Exportar"])
+abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises"])
 
 with abas[0]:
     st.subheader("📆 Total de Vendas por Dia")
@@ -127,28 +125,3 @@ with abas[1]:
     agrupado = df.groupby(col_selecionada)[col_metric].sum().reset_index().sort_values(by=col_metric, ascending=False).head(20)
     fig_dinamico = px.bar(agrupado, x=col_metric, y=col_selecionada, orientation="h", title=f"Top 20 por {col_selecionada} usando {col_metric}")
     st.plotly_chart(fig_dinamico, use_container_width=True)
-
-with abas[2]:
-    st.subheader("📤 Exportar Todas as Abas")
-    df_export = df.copy()
-    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
-    df["dia"] = df["dateCreated"].dt.date
-
-    for col in df_export.columns:
-        df_export[col] = df_export[col].apply(lambda x: str(x)[:32767] if pd.notnull(x) else "")
-
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter', options={"strings_to_formulas": False}) as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Vendas Filtradas')
-        df.groupby("dia")["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Resumo Diário')
-        df.groupby("mes")["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Resumo Mensal')
-        df.groupby(["mes", "channel"])["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='Canal x Mês')
-        df.groupby(["mes", "item_sku"])["totalValue"].sum().reset_index().to_excel(writer, index=False, sheet_name='SKU x Mês')
-        df.groupby("channel")["totalValue"].sum().sort_values(ascending=False).reset_index().to_excel(writer, index=False, sheet_name='Ranking Canais')
-
-    st.download_button(
-        label="📥 Baixar Excel Completo",
-        data=buffer.getvalue(),
-        file_name="dashboard_completo.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
