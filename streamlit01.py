@@ -4,7 +4,8 @@ import pandas as pd
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
 # Carrega os dados
-df = pd.read_csv("relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv", sep=";")
+df = pd.read_csv("relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv", sep=";", encoding="latin1")
+
 
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 
