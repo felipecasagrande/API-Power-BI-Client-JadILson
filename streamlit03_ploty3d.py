@@ -87,7 +87,7 @@ fig3 = px.treemap(
 )
 st.plotly_chart(fig3, use_container_width=True)
 
-# 🔄 Total de vendas por canal (se aplicável)
+# 🔄 Vendas por canal
 if "salesChannel" in df.columns:
     st.subheader("🛍️ Vendas por Canal de Venda")
     vendas_por_canal = df_filtrado["salesChannel"].value_counts().reset_index()
@@ -100,7 +100,7 @@ if "salesChannel" in df.columns:
     )
     st.plotly_chart(fig4, use_container_width=True)
 
-# 🔁 Evolução mensal
+# 📅 Evolução mensal
 st.subheader("📅 Evolução Mensal de Vendas")
 df_filtrado["mes"] = df_filtrado["dateCreated"].dt.to_period("M").astype(str)
 mensal = df_filtrado.groupby("mes")["totalValue"].sum().reset_index()
@@ -113,7 +113,25 @@ fig5 = px.area(
 )
 st.plotly_chart(fig5, use_container_width=True)
 
+# 📊 Novos Gráficos adicionais
+st.subheader("🧭 Distribuição de Preço dos Produtos")
+fig6 = px.violin(df_filtrado, y="item_price", box=True, points="all", title="Distribuição de Preço dos Produtos")
+st.plotly_chart(fig6, use_container_width=True)
+
+st.subheader("🔍 Correlação entre Preço e Custo")
+fig7 = px.scatter(df_filtrado, x="item_price", y="item_cost", title="Correlação entre Preço e Custo", trendline="ols")
+st.plotly_chart(fig7, use_container_width=True)
+
+st.subheader("📌 Densidade de Vendas por Data")
+fig8 = px.density_heatmap(df_filtrado, x=df_filtrado["dateCreated"].dt.date, y="item_title", nbinsx=30, title="Mapa de Calor de Vendas por Produto e Data")
+st.plotly_chart(fig8, use_container_width=True)
+
+st.subheader("📦 Boxplot de Custo dos Produtos")
+fig9 = px.box(df_filtrado, x="item_title", y="item_cost", title="Boxplot de Custos por Produto")
+st.plotly_chart(fig9, use_container_width=True)
+
 # 📤 Exportação
+df_filtrado.drop(columns=["mes"], errors="ignore", inplace=True)
 st.subheader("📤 Exportar Dados Filtrados")
 col_csv, col_excel = st.columns(2)
 
