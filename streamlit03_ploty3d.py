@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import date
 import io
-import xlsxwriter
+
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
