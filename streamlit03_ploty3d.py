@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import date
 import io
 import xlsxwriter
@@ -10,7 +11,8 @@ st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 # 📥 Leitura do CSV
-df = pd.read_csv("relatorio_magis5_97048_registros_2025-04-26_07-59-04.csv", sep=";", encoding="latin1")
+file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
+df = pd.read_csv(file_path, sep=";", encoding="latin1")
 
 # 🧹 Limpeza e conversões
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
@@ -23,7 +25,6 @@ st.sidebar.header("📅 Filtros")
 start_date = st.sidebar.date_input("Data inicial", date(2025, 1, 1))
 end_date = st.sidebar.date_input("Data final", date.today())
 
-# Filtro por produto (dropdown)
 produtos = df["item_title"].dropna().unique()
 produto_selecionado = st.sidebar.selectbox("Selecionar Produto", options=["Todos"] + list(produtos))
 
@@ -35,7 +36,7 @@ df_filtrado = df[
 if produto_selecionado != "Todos":
     df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
 
-# KPIs Principais
+# KPIs
 vendas_total = df_filtrado["totalValue"].sum()
 quantidade_total = df_filtrado["item_title"].count()
 
@@ -43,7 +44,7 @@ col1, col2 = st.columns(2)
 col1.metric("💵 Valor Total de Vendas", f"R$ {vendas_total:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
 col2.metric("📦 Quantidade de Itens Vendidos", f"{quantidade_total:,}".replace(",", "."))
 
-# Gráfico de Vendas por Dia
+# 📊 Evolução das Vendas
 st.subheader("💰 Total de Vendas por Dia")
 vendas_por_dia = df_filtrado.groupby(df_filtrado["dateCreated"].dt.date)["totalValue"].sum().reset_index()
 vendas_por_dia["totalValueFormatado"] = vendas_por_dia["totalValue"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
@@ -59,50 +60,61 @@ fig1 = px.line(
 fig1.update_traces(text=vendas_por_dia["totalValueFormatado"], hovertemplate="Data: %{x}<br>Total: %{text}<extra></extra>")
 st.plotly_chart(fig1, use_container_width=True)
 
-# Itens mais vendidos
+# 📦 Top Itens por Quantidade
 st.subheader("📦 Top 10 Itens mais Vendidos")
 mais_vendidos = df_filtrado["item_title"].value_counts().head(10).reset_index()
 mais_vendidos.columns = ["item_title", "quantidade"]
 
-fig2 = px.bar(
+fig2 = px.pie(
     mais_vendidos,
-    x="quantidade",
-    y="item_title",
-    orientation="h",
-    labels={"item_title": "Produto", "quantidade": "Quantidade"},
-    title="Top 10 Produtos por Quantidade Vendida",
-    text="quantidade"
+    values="quantidade",
+    names="item_title",
+    title="Participação dos 10 Itens mais Vendidos"
 )
-fig2.update_traces(textposition="outside")
 st.plotly_chart(fig2, use_container_width=True)
 
-# Lucro por Produto
+# 📈 Top Produtos por Lucro
 st.subheader("📈 Top 10 Produtos por Lucro Total")
 df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
 lucro = df_filtrado.groupby("item_title")["lucro_unitario"].sum().sort_values(ascending=False).head(10).reset_index()
 lucro["lucro_formatado"] = lucro["lucro_unitario"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
 
-fig4 = px.bar(
+fig3 = px.treemap(
     lucro,
-    x="lucro_unitario",
-    y="item_title",
-    orientation="h",
-    text="lucro_formatado",
-    labels={"item_title": "Produto", "lucro_unitario": "Lucro Total (R$)"},
-    title="Top 10 Produtos por Lucro Total"
+    path=["item_title"],
+    values="lucro_unitario",
+    title="Lucro Total por Produto (Top 10)",
 )
-fig4.update_traces(textposition="outside")
-fig4.update_layout(
-    yaxis=dict(title="Produto"),
-    xaxis=dict(title="Lucro Total (R$)"),
-    margin=dict(l=0, r=0, t=50, b=0),
-    height=600
-)
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(fig3, use_container_width=True)
 
-# 📤 Exportação dos dados filtrados
+# 🔄 Total de vendas por canal (se aplicável)
+if "salesChannel" in df.columns:
+    st.subheader("🛍️ Vendas por Canal de Venda")
+    vendas_por_canal = df_filtrado["salesChannel"].value_counts().reset_index()
+    vendas_por_canal.columns = ["Canal", "Quantidade"]
+    fig4 = px.funnel(
+        vendas_por_canal,
+        x="Quantidade",
+        y="Canal",
+        title="Distribuição das Vendas por Canal"
+    )
+    st.plotly_chart(fig4, use_container_width=True)
+
+# 🔁 Evolução mensal
+st.subheader("📅 Evolução Mensal de Vendas")
+df_filtrado["mes"] = df_filtrado["dateCreated"].dt.to_period("M").astype(str)
+mensal = df_filtrado.groupby("mes")["totalValue"].sum().reset_index()
+fig5 = px.area(
+    mensal,
+    x="mes",
+    y="totalValue",
+    title="Vendas Totais por Mês",
+    labels={"mes": "Mês", "totalValue": "Total Vendido (R$)"}
+)
+st.plotly_chart(fig5, use_container_width=True)
+
+# 📤 Exportação
 st.subheader("📤 Exportar Dados Filtrados")
-
 col_csv, col_excel = st.columns(2)
 
 csv = df_filtrado.to_csv(index=False, sep=";", encoding="utf-8")
@@ -116,7 +128,6 @@ col_csv.download_button(
 buffer = io.BytesIO()
 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
     df_filtrado.to_excel(writer, index=False, sheet_name='Vendas')
-
 
 col_excel.download_button(
     label="📊 Baixar Excel",
