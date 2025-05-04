@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
+import io
+import xlsxwriter
 
 # Configuração da página
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
@@ -21,24 +23,17 @@ st.sidebar.header("📅 Filtros")
 start_date = st.sidebar.date_input("Data inicial", date(2025, 1, 1))
 end_date = st.sidebar.date_input("Data final", date.today())
 
-# Filtros adicionais
+# Filtro por produto (dropdown)
 produtos = df["item_title"].dropna().unique()
-produto_selecionado = st.sidebar.multiselect("Filtrar Produto(s)", produtos, default=produtos)
-
-canais = df["salesChannel"].dropna().unique()
-canal_selecionado = st.sidebar.multiselect("Filtrar Canal de Venda", canais, default=canais)
-
-status = df["status"].dropna().unique()
-status_selecionado = st.sidebar.multiselect("Filtrar Status do Pedido", status, default=status)
+produto_selecionado = st.sidebar.selectbox("Selecionar Produto", options=["Todos"] + list(produtos))
 
 # Aplicação dos filtros
 df_filtrado = df[
     (df["dateCreated"].dt.date >= start_date) &
-    (df["dateCreated"].dt.date <= end_date) &
-    (df["item_title"].isin(produto_selecionado)) &
-    (df["salesChannel"].isin(canal_selecionado)) &
-    (df["status"].isin(status_selecionado))
+    (df["dateCreated"].dt.date <= end_date)
 ]
+if produto_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
 
 # KPIs Principais
 vendas_total = df_filtrado["totalValue"].sum()
@@ -104,3 +99,28 @@ fig4.update_layout(
     height=600
 )
 st.plotly_chart(fig4, use_container_width=True)
+
+# 📤 Exportação dos dados filtrados
+st.subheader("📤 Exportar Dados Filtrados")
+
+col_csv, col_excel = st.columns(2)
+
+csv = df_filtrado.to_csv(index=False, sep=";", encoding="utf-8")
+col_csv.download_button(
+    label="📄 Baixar CSV",
+    data=csv,
+    file_name="dados_filtrados.csv",
+    mime="text/csv"
+)
+
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    df_filtrado.to_excel(writer, index=False, sheet_name='Vendas')
+    writer.save()
+
+col_excel.download_button(
+    label="📊 Baixar Excel",
+    data=buffer.getvalue(),
+    file_name="dados_filtrados.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
