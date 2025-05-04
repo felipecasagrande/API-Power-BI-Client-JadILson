@@ -53,34 +53,30 @@ fig2 = px.bar(
 )
 st.plotly_chart(fig2, use_container_width=True)
 
-# 3. 📈 Lucro por Produto (3D)
-st.subheader("📈 Top 10 Produtos por Lucro Total (Plotly 3D)")
-df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
+# 3. 📈 Lucro por Produto (barras horizontais)
+st.subheader("📈 Top 10 Produtos por Lucro Total")
 
-lucro = df_filtrado.groupby("item_title")[["lucro_unitario"]].sum()
-lucro = lucro.sort_values(by="lucro_unitario", ascending=False).head(10)
-lucro["Ranking"] = range(1, len(lucro) + 1)
+df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
+lucro = df_filtrado.groupby("item_title")[["lucro_unitario"]].sum().sort_values(by="lucro_unitario", ascending=False).head(10)
+lucro = lucro.reset_index()
 lucro["lucro_formatado"] = lucro["lucro_unitario"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
 
-fig3 = go.Figure(data=[
-    go.Bar3d(
-        x=lucro["Ranking"],
-        y=lucro.index,
-        z=lucro["lucro_unitario"],
-        text=lucro["lucro_formatado"],
-        hovertemplate="<b>%{y}</b><br>Lucro Total: %{text}<extra></extra>"
-    )
-])
-
-fig3.update_layout(
-    scene=dict(
-        xaxis_title="Ranking",
-        yaxis_title="Produto",
-        zaxis_title="Lucro Total (R$)"
-    ),
-    margin=dict(l=0, r=0, b=0, t=30),
-    height=600,
-    title="Lucro Total por Produto em Reais (R$)"
+fig4 = px.bar(
+    lucro,
+    x="lucro_unitario",
+    y="item_title",
+    orientation="h",
+    text="lucro_formatado",
+    labels={"item_title": "Produto", "lucro_unitario": "Lucro Total (R$)"},
+    title="Top 10 Produtos por Lucro Total"
 )
 
-st.plotly_chart(fig3, use_container_width=True)
+fig4.update_traces(textposition="outside")
+fig4.update_layout(
+    yaxis=dict(title="Produto"),
+    xaxis=dict(title="Lucro Total (R$)"),
+    margin=dict(l=0, r=0, t=50, b=0),
+    height=600
+)
+
+st.plotly_chart(fig4, use_container_width=True)
