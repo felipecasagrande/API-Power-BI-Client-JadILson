@@ -48,6 +48,7 @@ fig2 = px.bar(
     x="quantidade",
     y="item_title",
     orientation="h",
+    text="quantidade",
     labels={"item_title": "Produto", "quantidade": "Quantidade"},
     title="Top 10 Produtos por Quantidade Vendida"
 )
