@@ -20,7 +20,6 @@ df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", "
 df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 df["totalValue"] = pd.to_numeric(df["totalValue"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 
-
 # 🎛 Filtros na Sidebar
 st.sidebar.header("📅 Filtros de Data")
 start_date = st.sidebar.date_input("Data inicial", df["dateCreated"].min().date())
@@ -29,7 +28,6 @@ end_date = st.sidebar.date_input("Data final", df["dateCreated"].max().date())
 produtos_disponiveis = df["item_title"].dropna().unique() if "item_title" in df.columns else []
 produto_selecionado = st.sidebar.selectbox("Produto", options=["Todos"] + list(produtos_disponiveis))
 
-# 🎯 Novos Filtros
 canais_disponiveis = df["salesChannel"].dropna().unique() if "salesChannel" in df.columns else []
 canal_selecionado = st.sidebar.selectbox("Canal de Venda", options=["Todos"] + list(canais_disponiveis))
 
@@ -38,19 +36,21 @@ status_selecionado = st.sidebar.selectbox("Status", options=["Todos"] + list(sta
 
 skus_disponiveis = df["sku"].dropna().unique() if "sku" in df.columns else []
 sku_selecionado = st.sidebar.selectbox("SKU", options=["Todos"] + list(skus_disponiveis))
- # Aplicação dos filtros
- df_filtrado = df[
-     (df["dateCreated"].dt.date >= start_date) &
-     (df["dateCreated"].dt.date <= end_date)
- ]
- if produto_selecionado != "Todos":
-     df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
- if canal_selecionado != "Todos" and "salesChannel" in df.columns:
-     df_filtrado = df_filtrado[df_filtrado["salesChannel"] == canal_selecionado]
- if status_selecionado != "Todos" and "status" in df.columns:
-     df_filtrado = df_filtrado[df_filtrado["status"] == status_selecionado]
- if sku_selecionado != "Todos" and "sku" in df.columns:
-     df_filtrado = df_filtrado[df_filtrado["sku"] == sku_selecionado]
+
+# Aplicação dos filtros
+df_filtrado = df[
+    (df["dateCreated"].dt.date >= start_date) &
+    (df["dateCreated"].dt.date <= end_date)
+]
+if produto_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["item_title"] == produto_selecionado]
+if canal_selecionado != "Todos" and "salesChannel" in df.columns:
+    df_filtrado = df_filtrado[df_filtrado["salesChannel"] == canal_selecionado]
+if status_selecionado != "Todos" and "status" in df.columns:
+    df_filtrado = df_filtrado[df_filtrado["status"] == status_selecionado]
+if sku_selecionado != "Todos" and "sku" in df.columns:
+    df_filtrado = df_filtrado[df_filtrado["sku"] == sku_selecionado]
+
 # KPIs
 vendas_total = df_filtrado["totalValue"].sum()
 quantidade_total = df_filtrado["item_title"].count()
@@ -128,7 +128,7 @@ fig5 = px.area(
 )
 st.plotly_chart(fig5, use_container_width=True)
 
-# 📊 Novos Gráficos adicionais
+# 📊 Gráficos adicionais
 st.subheader("🧭 Distribuição de Preço dos Produtos")
 fig6 = px.violin(df_filtrado, y="item_price", box=True, points="all", title="Distribuição de Preço dos Produtos")
 st.plotly_chart(fig6, use_container_width=True)
