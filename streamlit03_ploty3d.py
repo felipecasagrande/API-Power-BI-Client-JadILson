@@ -52,26 +52,25 @@ margem_media = (lucro_total / vendas_total * 100) if vendas_total else 0
 st.markdown("""
 <style>
 .kpi-box {
-    border: 1px solid #CCC;
-    border-radius: 12px;
+    background-color: #003366;
+    color: white;
+    border-radius: 10px;
     padding: 20px;
     text-align: center;
-    background-color: #f9f9f9;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.05);
-    margin-bottom: 10px;
+    font-size: 18px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.markdown(f"<div class='kpi-box'><h4>💰 Valor Total</h4><p style='font-size:22px;'>R$ {vendas_total:,.2f}</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='kpi-box'><h4>Valor Total</h4><p>R$ {vendas_total:,.2f}</p></div>", unsafe_allow_html=True)
 with col2:
-    st.markdown(f"<div class='kpi-box'><h4>📦 Itens Vendidos</h4><p style='font-size:22px;'>{quantidade_total:,.0f}</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='kpi-box'><h4>Itens Vendidos</h4><p>{quantidade_total:,.0f}</p></div>", unsafe_allow_html=True)
 with col3:
-    st.markdown(f"<div class='kpi-box'><h4>🧾 Ticket Médio</h4><p style='font-size:22px;'>R$ {ticket_medio:,.2f}</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='kpi-box'><h4>Ticket Médio</h4><p>R$ {ticket_medio:,.2f}</p></div>", unsafe_allow_html=True)
 with col4:
-    st.markdown(f"<div class='kpi-box'><h4>📈 Margem Média</h4><p style='font-size:22px;'>{margem_media:.2f}%</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='kpi-box'><h4>Margem Média</h4><p>{margem_media:.2f}%</p></div>", unsafe_allow_html=True)
 
 # Gráficos
 st.subheader("📆 Vendas por Dia")
@@ -82,35 +81,32 @@ st.plotly_chart(fig1, use_container_width=True)
 st.subheader("🏆 Top Produtos por Quantidade")
 top_produtos = df.groupby("item_title")["item_quantity"].sum().nlargest(10).reset_index()
 fig2 = px.pie(top_produtos, names="item_title", values="item_quantity", title="Top 10 Produtos")
+fig2.update_layout(width=800, height=600)
 st.plotly_chart(fig2, use_container_width=True)
 
 st.subheader("🌳 Lucro por Produto")
 df["lucro_unitario"] = df["item_price"] - df["item_cost"]
 lucro = df.groupby("item_title")["lucro_unitario"].sum().nlargest(10).reset_index()
 fig3 = px.treemap(lucro, path=["item_title"], values="lucro_unitario", title="Top Lucro por Produto")
+fig3.update_traces(textfont=dict(size=28))
 st.plotly_chart(fig3, use_container_width=True)
 
 st.subheader("📊 Vendas por Mês")
 df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
 mensal = df.groupby("mes")["totalValue"].sum().reset_index()
 fig4 = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês")
+fig4.update_traces(text=mensal["totalValue"].round(2), textposition="top center")
 st.plotly_chart(fig4, use_container_width=True)
 
-st.subheader("💲 Distribuição de Preços")
-fig5 = px.violin(df, y="item_price", box=True, points="all", title="Distribuição de Preço")
+st.subheader("💲 Top 10 Preços")
+top_preco = df.nlargest(10, "item_price")
+fig5 = px.scatter(top_preco, x="item_title", y="item_price", title="Top 10 Preços por Produto")
 st.plotly_chart(fig5, use_container_width=True)
 
-st.subheader("🔎 Correlação Preço x Custo")
-fig6 = px.scatter(df, x="item_price", y="item_cost", title="Preço vs Custo")
+st.subheader("📦 Top 10 Custos")
+top_custo = df.nlargest(10, "item_cost")
+fig6 = px.box(top_custo, x="item_title", y="item_cost", title="Top 10 Custos")
 st.plotly_chart(fig6, use_container_width=True)
-
-st.subheader("🔥 Mapa de Calor: Produto x Data")
-fig7 = px.density_heatmap(df, x=df["dateCreated"].dt.date, y="item_title", nbinsx=30, title="Mapa de Calor de Vendas")
-st.plotly_chart(fig7, use_container_width=True)
-
-st.subheader("📦 Boxplot de Custos")
-fig8 = px.box(df, x="item_title", y="item_cost", title="Boxplot de Custos")
-st.plotly_chart(fig8, use_container_width=True)
 
 # Exportação
 st.subheader("📤 Exportar Dados")
@@ -122,5 +118,9 @@ col_csv.download_button("📄 Baixar CSV", data=csv, file_name="dados_filtrados.
 
 buffer = io.BytesIO()
 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    df.to_excel(writer, index=False, sheet_name='Vendas')
+    try:
+        df.to_excel(writer, index=False, sheet_name='Vendas')
+    except ValueError:
+        df = df.astype(str)
+        df.to_excel(writer, index=False, sheet_name='Vendas')
 col_excel.download_button("📊 Baixar Excel", data=buffer.getvalue(), file_name="dados_filtrados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
