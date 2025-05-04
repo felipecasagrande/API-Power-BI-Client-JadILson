@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
-import io
-
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 
@@ -86,7 +84,7 @@ with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
 # Abas
-abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises", "📤 Exportar"])
+abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises"])
 
 with abas[0]:
     st.subheader("📆 Total de Vendas por Dia")
