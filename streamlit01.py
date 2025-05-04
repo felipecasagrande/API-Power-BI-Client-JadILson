@@ -53,14 +53,6 @@ fig_status = px.bar(status, x="Status", y="Quantidade", text="Quantidade",
                     title="Status dos Pedidos", color="Quantidade")
 st.plotly_chart(fig_status, use_container_width=True)
 
-# 🗺️ Pedidos por Estado (UF)
-if "shipping_state" in df_filtrado.columns:
-    st.subheader("🗺️ Pedidos por Estado (UF)")
-    estado = df_filtrado["shipping_state"].value_counts().reset_index()
-    estado.columns = ["Estado", "Quantidade"]
-    fig_estado = px.bar(estado, x="Estado", y="Quantidade", text="Quantidade",
-                        title="Pedidos por Estado", color="Quantidade")
-    st.plotly_chart(fig_estado, use_container_width=True)
 
 # 📈 Lucro por Produto
 st.subheader("📈 Top 10 Produtos por Lucro Total")
