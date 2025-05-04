@@ -51,6 +51,9 @@ fig2 = px.bar(
     labels={"item_title": "Produto", "quantidade": "Quantidade"},
     title="Top 10 Produtos por Quantidade Vendida"
 )
+
+fig2.update_traces(textposition="outside")
+
 st.plotly_chart(fig2, use_container_width=True)
 
 # 3. 📈 Lucro por Produto (barras horizontais)
