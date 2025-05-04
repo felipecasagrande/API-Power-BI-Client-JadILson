@@ -6,6 +6,12 @@ import io
 import xlsxwriter
 
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
+
+# Alternância de tema
+tema_escuro = st.sidebar.toggle("🌗 Tema Escuro", value=True)
+if not tema_escuro:
+    st.markdown("""<style>body { background-color: white; color: black; }</style>""", unsafe_allow_html=True)
+
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
@@ -78,66 +84,28 @@ with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
 # Abas
-aba = st.tabs(["📆 Vendas por Dia", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "💲 Preços", "📦 Custos", "📤 Exportar", "🧮 Ticket por Canal"])
+aba = st.tabs(["📆 Vendas por Dia", "🧮 Ticket por Canal", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "📈 Comparativo Canais", "💲 Preços", "📦 Custos", "📤 Exportar"])
 
-with aba[0]:
-    diario = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
-    fig = px.line(diario, x="dateCreated", y="totalValue", title="Vendas Diárias")
-    fig.update_traces(hovertemplate='Data: %{x}<br>Vendas: R$ %{y:,.2f}<extra></extra>')
-    st.plotly_chart(fig, use_container_width=True)
+with aba[5]:
+    st.subheader("📈 Comparativo de Vendas entre Canais")
+    if "channel" in df.columns:
+        comparativo = df.groupby(["channel", df["dateCreated"].dt.to_period("M").astype(str)])["totalValue"].sum().reset_index()
+        fig = px.line(comparativo, x="dateCreated", y="totalValue", color="channel", markers=True, title="Vendas por Canal ao Longo dos Meses")
+        fig.update_traces(hovertemplate='Canal: %{legendgroup}<br>Mês: %{x}<br>Total: R$ %{y:,.2f}<extra></extra>')
+        st.plotly_chart(fig, use_container_width=True)
 
-with aba[1]:
-    top_prod = df.groupby("item_title")["item_quantity"].sum().nlargest(10).reset_index()
-    fig = px.pie(top_prod, names="item_title", values="item_quantity", title="Top Produtos por Quantidade")
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-with aba[2]:
-    df["lucro_unitario"] = df["item_price"] - df["item_cost"]
-    lucro = df.groupby("item_title")["lucro_unitario"].sum().nlargest(10).reset_index()
-    fig = px.treemap(lucro, path=["item_title"], values="lucro_unitario", title="Lucro por Produto")
-    fig.update_traces(textfont=dict(size=28), hovertemplate='%{label}<br>Lucro Total: R$ %{value:,.2f}<extra></extra>')
-    st.plotly_chart(fig, use_container_width=True)
-
-with aba[3]:
-    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
-    mensal = df.groupby("mes")["totalValue"].sum().reset_index()
-    mensal["totalValueFormatado"] = mensal["totalValue"].apply(lambda x: f"R$ {x:,.2f}".replace(",", "v").replace(".", ",").replace("v", "."))
-    fig = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês", text="totalValueFormatado")
-    fig.update_traces(textposition="top center")
+with aba[6]:
+    st.subheader("Top 50 Preços")
+    top_preco = df.groupby("item_title")["item_price"].sum().sort_values(ascending=False).head(50).reset_index()
+    fig = px.bar(top_preco, x="item_price", y="item_title", orientation="h", title="Top 50 Preços por Produto", labels={"item_price": "Preço Total", "item_title": "Produto"})
     st.plotly_chart(fig, use_container_width=True)
 
 with aba[4]:
-    top_price = df.nlargest(50, "item_price")
-    fig = px.bar(top_price, y="item_title", x="item_price", orientation='h', title="Top 50 Preços")
+    df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
+    mensal = df.groupby("mes")["totalValue"].sum().reset_index()
+    mensal["variacao"] = mensal["totalValue"].pct_change().fillna(0) * 100
+    st.subheader("📊 Tabela de Vendas Mensais")
+    st.dataframe(mensal.rename(columns={"totalValue": "Vendas", "variacao": "% Variação"}).style.format({"Vendas": "R$ {:,.2f}", "% Variação": "{:.2f}%"}))
+    fig = px.area(mensal, x="mes", y="totalValue", title="Vendas por Mês", text=mensal["totalValue"].map(lambda x: f"R$ {x:,.0f}"))
+    fig.update_traces(textposition="top center")
     st.plotly_chart(fig, use_container_width=True)
-
-with aba[5]:
-    top_custo = df.nlargest(50, "item_cost")
-    fig = px.box(top_custo, y="item_title", x="item_cost", orientation='h', title="Top 50 Custos")
-    st.plotly_chart(fig, use_container_width=True)
-
-with aba[6]:
-    st.subheader("Exportar Dados")
-    df.drop(columns=["mes"], errors="ignore", inplace=True)
-    col_csv, col_excel = st.columns(2)
-
-    csv = df.to_csv(index=False, sep=";", encoding="utf-8")
-    col_csv.download_button("📄 Baixar CSV", data=csv, file_name="dados_filtrados.csv", mime="text/csv")
-
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        try:
-            df.to_excel(writer, index=False, sheet_name='Vendas')
-        except ValueError:
-            df.astype(str).to_excel(writer, index=False, sheet_name='Vendas')
-    col_excel.download_button("📊 Baixar Excel", data=buffer.getvalue(), file_name="dados_filtrados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-with aba[7]:
-    st.subheader("Ticket Médio por Canal")
-    if "channel" in df.columns:
-        canal_kpi = df.groupby("channel").agg({"totalValue": "sum", "item_quantity": "sum"}).reset_index()
-        canal_kpi["ticket"] = canal_kpi["totalValue"] / canal_kpi["item_quantity"]
-        fig = px.bar(canal_kpi, x="channel", y="ticket", title="Ticket Médio por Canal", text_auto='.2f')
-        fig.update_traces(hovertemplate='Canal: %{x}<br>Ticket Médio: R$ %{y:,.2f}<extra></extra>')
-        st.plotly_chart(fig, use_container_width=True)
