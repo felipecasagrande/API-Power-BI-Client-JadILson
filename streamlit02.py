@@ -61,16 +61,6 @@ ax3.set_title("Status dos Pedidos")
 ax3.set_xticklabels(ax3.get_xticklabels(), rotation=90)
 st.pyplot(fig3)
 
-# 🗺️ Pedidos por Estado (UF)
-if "shipping_state" in df_filtrado.columns:
-    st.subheader("🗺️ Pedidos por Estado (Seaborn)")
-    estado = df_filtrado["shipping_state"].value_counts().reset_index()
-    estado.columns = ["Estado", "Quantidade"]
-    fig4, ax4 = plt.subplots(figsize=(12, 6))
-    sns.barplot(data=estado, x="Quantidade", y="Estado", palette="light:b", ax=ax4)
-    ax4.set_title("Pedidos por Estado")
-    st.pyplot(fig4)
-
 # 📈 Lucro por Produto
 st.subheader("📈 Top 10 Produtos por Lucro Total (Seaborn)")
 df_filtrado["lucro_unitario"] = df_filtrado["item_price"] - df_filtrado["item_cost"]
