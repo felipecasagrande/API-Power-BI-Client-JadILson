@@ -83,17 +83,24 @@ with col3:
 with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
-# Abas
-abas = st.tabs(["📆 Vendas por Dia", "📊 Vendas por Mês + Análises"])
+# Abas separadas por dashboard
+tabs = st.tabs([
+    "📆 Vendas por Dia",
+    "📊 Vendas por Mês",
+    "📈 Variação por Canal",
+    "📊 Ticket Médio por Canal",
+    "📦 SKUs por Mês",
+    "🔍 Segmentação Dinâmica"
+])
 
-with abas[0]:
+with tabs[0]:
     st.subheader("📆 Total de Vendas por Dia")
     vendas_dia = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig = px.line(vendas_dia, x="dateCreated", y="totalValue", markers=True, title="Total de Vendas por Dia")
     st.plotly_chart(fig, use_container_width=True)
 
-with abas[1]:
-    st.subheader("📊 Vendas por Mês e Variação")
+with tabs[1]:
+    st.subheader("📊 Vendas por Mês")
     df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
     vendas_mes = df.groupby("mes")["totalValue"].sum().reset_index()
     vendas_mes["variação"] = vendas_mes["totalValue"].pct_change() * 100
@@ -101,17 +108,20 @@ with abas[1]:
     fig.update_traces(texttemplate="R$ %{text:,.2f}", textposition="outside")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("📊 Variação de Vendas por Canal")
+with tabs[2]:
+    st.subheader("📈 Variação de Vendas por Canal")
     canal_mes = df.groupby(["mes", "channel"]).agg({"totalValue": "sum"}).reset_index()
     canal_mes["variação"] = canal_mes.groupby("channel")["totalValue"].pct_change() * 100
     fig_canal = px.line(canal_mes, x="mes", y="totalValue", color="channel", markers=True, title="Comparativo de Vendas por Canal")
     st.plotly_chart(fig_canal, use_container_width=True)
 
+with tabs[3]:
     st.subheader("📈 Evolução do Ticket Médio por Canal")
     ticket_canal_mes = df.groupby(["mes", "channel"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
     fig_ticket = px.line(ticket_canal_mes, x="mes", y="ticket_medio", color="channel", markers=True, title="Ticket Médio por Canal por Mês")
     st.plotly_chart(fig_ticket, use_container_width=True)
 
+with tabs[4]:
     st.subheader("📦 Comparativo de SKUs por Mês")
     sku_mes = df.groupby(["mes", "item_sku"])["totalValue"].sum().reset_index()
     top_skus = sku_mes.groupby("item_sku")["totalValue"].sum().nlargest(5).index.tolist()
@@ -119,6 +129,7 @@ with abas[1]:
     fig_sku = px.bar(sku_mes, x="mes", y="totalValue", color="item_sku", barmode="group", title="Top 5 SKUs com maior faturamento")
     st.plotly_chart(fig_sku, use_container_width=True)
 
+with tabs[5]:
     st.subheader("🔍 Segmentações por Coluna (Filtro Dinâmico)")
     col_selecionada = st.selectbox("Selecione uma coluna para agrupar:", options=df.columns)
     col_metric = st.selectbox("Selecione a métrica:", ["totalValue", "item_quantity", "item_price", "item_cost"])
