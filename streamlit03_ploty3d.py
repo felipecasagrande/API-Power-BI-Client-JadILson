@@ -18,6 +18,7 @@ file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
 df = pd.read_csv(file_path, sep=";", encoding="latin1")
 
 # Conversão e limpeza
+df = df[["dateCreated", "item_title", "item_sku", "channel", "status", "item_quantity", "item_price", "item_cost", "totalValue"]]
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 df["item_price"] = pd.to_numeric(df["item_price"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
 df["item_cost"] = pd.to_numeric(df["item_cost"].astype(str).str.replace(",", ".").str.replace(r"[^\d\.]", "", regex=True), errors="coerce")
@@ -83,23 +84,20 @@ with col3:
 with col4:
     st.markdown(f"<div class='kpi-box'><div class='kpi-icon'>📈</div><div>Margem Média<br>{margem_media:.2f}%</div></div>", unsafe_allow_html=True)
 
-# Abas
-abas = st.tabs(["📆 Vendas por Dia", "🧮 Ticket por Canal", "🏆 Top Produtos", "🌳 Lucro", "📊 Vendas por Mês", "📈 Comparativo Canais", "💲 Preços", "📦 Custos", "📤 Exportar"])
+# Exportação
+st.subheader("📤 Exportar Dados Filtrados")
+df_export = df.copy()
+for col in df_export.columns:
+    if df_export[col].dtype == "object":
+        df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
 
-with abas[8]:
-    st.subheader("📤 Exportar Dados Filtrados")
-    df_export = df.copy()
-    for col in df_export.columns:
-        if df_export[col].dtype == "object":
-            df_export[col] = df_export[col].astype(str).str.slice(0, 32767)
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    df_export.to_excel(writer, index=False, sheet_name='Vendas')
 
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Vendas')
-
-    st.download_button(
-        label="📥 Baixar Excel",
-        data=buffer.getvalue(),
-        file_name="vendas_filtradas.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+st.download_button(
+    label="📥 Baixar Excel",
+    data=buffer.getvalue(),
+    file_name="vendas_filtradas.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
