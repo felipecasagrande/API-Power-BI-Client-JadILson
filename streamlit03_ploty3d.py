@@ -10,7 +10,7 @@ st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 # 📥 Leitura do CSV fixo
-file_path = "streamlit/relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
+file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
 df = pd.read_csv(file_path, sep=";", encoding="latin1")
 
 # 🧹 Limpeza e conversões
