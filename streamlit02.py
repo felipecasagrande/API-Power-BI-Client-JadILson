@@ -2,11 +2,7 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
 
-=======
- 
->>>>>>> 78a4460 (Atualiza requirements.txt com novas dependências do dashboard)
 # Configurações iniciais
 st.set_page_config(page_title="Dashboard Magis5", layout="wide")
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
