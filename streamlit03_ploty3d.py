@@ -59,7 +59,6 @@ st.markdown("""
     border-radius: 10px;
     padding: 12px;
     text-align: center;
-    font-size: 16px;
 }
 .kpi-container {
     display: flex;
@@ -73,6 +72,7 @@ st.markdown("""
 }
 select, input, .stMultiSelect > div { font-size: 19.2px !important; }
 text, .stText, .stLabel, .stDownloadButton, .stButton, .stTextInput > div > input, .stDateInput, .stSelectbox > div > div, .stDataFrame { font-size: 19.2px !important; }
+h2 { font-size: 19.2px !important; }
 </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
@@ -91,8 +91,7 @@ df["canal_resumido"] = df["channel"].astype(str).str.split("-").str[0]
 tabs = st.tabs(["📊 Gráficos 1", "📈 Gráficos 2", "📤 Exportar"])
 
 with tabs[0]:
-    st.markdown("<style>h2 { font-size: 19.2px !important; }</style>", unsafe_allow_html=True)
-st.subheader("📆 Total de Vendas por Dia")
+    st.subheader("📆 Total de Vendas por Dia")
     vendas_dia = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig_dia = px.line(vendas_dia, x="dateCreated", y="totalValue", markers=True)
     st.plotly_chart(fig_dia, use_container_width=True)
