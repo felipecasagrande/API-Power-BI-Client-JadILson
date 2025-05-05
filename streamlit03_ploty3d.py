@@ -13,7 +13,8 @@ if not tema_escuro:
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 # Leitura e tratamento
-df = pd.read_csv("relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv", sep=";", encoding="latin1")
+file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
+df = pd.read_csv(file_path, sep=";", encoding="latin1")
 df = df[["dateCreated", "item_title", "item_sku", "channel", "status", "item_quantity", "item_price", "item_cost", "totalValue"]]
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 for col in ["item_price", "item_cost", "totalValue"]:
@@ -81,10 +82,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Agrupamentos prévios
+# Agrupamentos
 df["mes"] = df["dateCreated"].dt.to_period("M").astype(str)
+df["canal_resumido"] = df["channel"].astype(str).str.split("-").str[0]
 
-# Tabs simplificadas
 tabs = st.tabs(["📊 Gráficos 1", "📈 Gráficos 2", "📤 Exportar"])
 
 with tabs[0]:
@@ -106,10 +107,10 @@ with tabs[0]:
 
 with tabs[1]:
     st.subheader("📈 Gráfico Invertido: Total de Vendas por Canal e Mês")
-    canal_mes = df.groupby(["channel", "mes"])["totalValue"].sum().reset_index()
+    canal_mes = df.groupby(["canal_resumido", "mes"])["totalValue"].sum().reset_index()
     fig_inv = px.bar(
         canal_mes,
-        x="channel", y="totalValue", color="mes",
+        x="canal_resumido", y="totalValue", color="mes",
         barmode="group",
         title="Total por Canal e Mês (Canal no Eixo X)"
     )
@@ -117,13 +118,21 @@ with tabs[1]:
         xaxis_tickangle=-90,
         xaxis_title="Canal",
         yaxis_title="Valor Total",
-        legend_title="Mês"
+        legend_title="Mês",
+        legend_orientation="h",
+        legend_y=-0.3
     )
     st.plotly_chart(fig_inv, use_container_width=True)
 
-    st.subheader("📈 Evolução do Ticket Médio por Canal")
-    ticket_canal_mes = df.groupby(["mes", "channel"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
-    fig_ticket = px.line(ticket_canal_mes, x="mes", y="ticket_medio", color="channel", markers=True)
+    st.subheader("📈 Evolução do Ticket Médio por Canal (Invertido)")
+    ticket_canal_mes = df.groupby(["mes", "canal_resumido"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
+    fig_ticket = px.bar(ticket_canal_mes, x="ticket_medio", y="canal_resumido", color="mes", orientation="h")
+    fig_ticket.update_layout(
+        legend_orientation="h",
+        legend_y=-0.3,
+        yaxis_title="Canal",
+        xaxis_title="Ticket Médio"
+    )
     st.plotly_chart(fig_ticket, use_container_width=True)
 
 with tabs[2]:
