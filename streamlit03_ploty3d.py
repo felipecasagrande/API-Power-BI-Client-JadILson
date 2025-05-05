@@ -3,14 +3,14 @@ import pandas as pd
 import plotly.express as px
 from datetime import date
 
-st.set_page_config(page_title="Dashboard Magis5", layout="wide")
+st.set_page_config(page_title="Dashboard Magis5", layout="wide", initial_sidebar_state="expanded")
 
 # Tema escuro
 tema_escuro = st.sidebar.toggle("🌗 Tema Escuro", value=True)
 if not tema_escuro:
     st.markdown("<style>body { background-color: white; color: black; }</style>", unsafe_allow_html=True)
 
-st.title("📦 Dashboard Magis5 - Relatório de Vendas")
+st.markdown("<div style='display: flex; align-items: center; gap: 10px;'>📦 <h1 style='display: inline;'>Dashboard Magis5 - Relatório de Vendas</h1><span style='font-size: 19.2px; color: #00d4ff; font-weight: bold;'>(Filtros)</span></div>", unsafe_allow_html=True)
 
 # Leitura e tratamento
 file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
@@ -53,6 +53,7 @@ margem_media = (lucro_total / vendas_total * 100) if vendas_total else 0
 st.markdown("""
 <style>
 .kpi-box {
+    font-size: 19.2px;
     background-color: #003366;
     color: white;
     border-radius: 10px;
@@ -70,8 +71,9 @@ st.markdown("""
     margin: 5px;
     min-width: 140px;
 }
-</style>
-""", unsafe_allow_html=True)
+select, input, .stMultiSelect > div { font-size: 19.2px !important; }
+text, .stText, .stLabel, .stDownloadButton, .stButton, .stTextInput > div > input, .stDateInput, .stSelectbox > div > div, .stDataFrame { font-size: 19.2px !important; }
+</style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="kpi-container">
@@ -89,7 +91,8 @@ df["canal_resumido"] = df["channel"].astype(str).str.split("-").str[0]
 tabs = st.tabs(["📊 Gráficos 1", "📈 Gráficos 2", "📤 Exportar"])
 
 with tabs[0]:
-    st.subheader("📆 Total de Vendas por Dia")
+    st.markdown("<style>h2 { font-size: 19.2px !important; }</style>", unsafe_allow_html=True)
+st.subheader("📆 Total de Vendas por Dia")
     vendas_dia = df.groupby(df["dateCreated"].dt.date)["totalValue"].sum().reset_index()
     fig_dia = px.line(vendas_dia, x="dateCreated", y="totalValue", markers=True)
     st.plotly_chart(fig_dia, use_container_width=True)
@@ -101,8 +104,8 @@ with tabs[0]:
     st.plotly_chart(fig_mes, use_container_width=True)
 
     st.subheader("📊 Quantidade de Vendas por Canal")
-    quantidade_canal = df.groupby("channel")["item_quantity"].sum().reset_index().sort_values(by="item_quantity", ascending=False)
-    fig_qtd = px.pie(quantidade_canal, names="channel", values="item_quantity", title="Distribuição de Quantidade por Canal")
+    quantidade_canal = df.groupby("canal_resumido")["item_quantity"].sum().reset_index().sort_values(by="item_quantity", ascending=False)
+    fig_qtd = px.pie(quantidade_canal, names="canal_resumido", values="item_quantity", title="Distribuição de Quantidade por Canal")
     st.plotly_chart(fig_qtd, use_container_width=True)
 
 with tabs[1]:
@@ -126,6 +129,7 @@ with tabs[1]:
 
     st.subheader("📈 Evolução do Ticket Médio por Canal (Invertido)")
     ticket_canal_mes = df.groupby(["mes", "canal_resumido"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
+    ticket_canal_mes = ticket_canal_mes.sort_values(by="ticket_medio", ascending=False)
     fig_ticket = px.bar(ticket_canal_mes, x="ticket_medio", y="canal_resumido", color="mes", orientation="h")
     fig_ticket.update_layout(
         legend_orientation="h",
