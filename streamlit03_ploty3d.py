@@ -13,8 +13,7 @@ if not tema_escuro:
 st.title("📦 Dashboard Magis5 - Relatório de Vendas")
 
 # Leitura e tratamento
-file_path = "relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv"
-df = pd.read_csv(file_path, sep=";", encoding="latin1")
+df = pd.read_csv("relatorio_magis5_98900_registros_2025-05-04_07-46-08.csv", sep=";", encoding="latin1")
 df = df[["dateCreated", "item_title", "item_sku", "channel", "status", "item_quantity", "item_price", "item_cost", "totalValue"]]
 df["dateCreated"] = pd.to_datetime(df["dateCreated"], errors="coerce")
 for col in ["item_price", "item_cost", "totalValue"]:
@@ -100,24 +99,32 @@ with tabs[0]:
     fig_mes.update_traces(texttemplate="R$ %{text:,.2f}", textposition="outside")
     st.plotly_chart(fig_mes, use_container_width=True)
 
+    st.subheader("📊 Quantidade de Vendas por Canal")
+    quantidade_canal = df.groupby("channel")["item_quantity"].sum().reset_index().sort_values(by="item_quantity", ascending=False)
+    fig_qtd = px.pie(quantidade_canal, names="channel", values="item_quantity", title="Distribuição de Quantidade por Canal")
+    st.plotly_chart(fig_qtd, use_container_width=True)
+
 with tabs[1]:
-    st.subheader("📈 Variação de Vendas por Canal (Inverso)")
-    canal_mes = df.groupby(["mes", "channel"])["totalValue"].sum().reset_index()
-    fig_inv = px.bar(canal_mes, y="mes", x="totalValue", color="channel", orientation="h", title="Total por Canal e Mês")
+    st.subheader("📈 Gráfico Invertido: Total de Vendas por Canal e Mês")
+    canal_mes = df.groupby(["channel", "mes"])["totalValue"].sum().reset_index()
+    fig_inv = px.bar(
+        canal_mes,
+        x="channel", y="totalValue", color="mes",
+        barmode="group",
+        title="Total por Canal e Mês (Canal no Eixo X)"
+    )
     fig_inv.update_layout(
-        yaxis_title="Mês",
-        xaxis_title="Valor Total",
-        legend_title="Canal",
-        barmode="group"
+        xaxis_tickangle=-90,
+        xaxis_title="Canal",
+        yaxis_title="Valor Total",
+        legend_title="Mês"
     )
     st.plotly_chart(fig_inv, use_container_width=True)
 
-    st.subheader("📦 Comparativo de SKUs por Mês")
-    sku_mes = df.groupby(["mes", "item_sku"])["totalValue"].sum().reset_index()
-    top_skus = sku_mes.groupby("item_sku")["totalValue"].sum().nlargest(5).index.tolist()
-    sku_mes = sku_mes[sku_mes["item_sku"].isin(top_skus)]
-    fig_sku = px.bar(sku_mes, x="mes", y="totalValue", color="item_sku", barmode="group")
-    st.plotly_chart(fig_sku, use_container_width=True)
+    st.subheader("📈 Evolução do Ticket Médio por Canal")
+    ticket_canal_mes = df.groupby(["mes", "channel"]).apply(lambda x: x["totalValue"].sum() / x["item_quantity"].sum()).reset_index(name="ticket_medio")
+    fig_ticket = px.line(ticket_canal_mes, x="mes", y="ticket_medio", color="channel", markers=True)
+    st.plotly_chart(fig_ticket, use_container_width=True)
 
 with tabs[2]:
     st.subheader("📤 Exportar Dados Filtrados em CSV")
